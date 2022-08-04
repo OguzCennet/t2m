@@ -105,16 +105,17 @@ class Data():
     end_dev = int(start_dev + length*self.split[1])
     start_test = end_dev
 
-    '''
+    
     df_train = self.df[:end_train]
+    print('df_train: ', df_train.head(3))
     df_dev = self.df[start_dev:end_dev]
     df_test = self.df[start_test:]
     '''
-
     df_train = self.df[:10]
     print('df_train: ', df_train.head(3))
     df_dev = self.df[10:20]
     df_test = self.df[20:30]
+    '''
 
     minidataKwargs = {'lmksSubset':self.lmksSubset,
                       'time':self.time,

@@ -16,7 +16,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 from dataUtils import *
 from lossUtils import *
-from model.new_model import *
+from model.model import *
 from data.data import *
 
 from pycasper.name import Name
