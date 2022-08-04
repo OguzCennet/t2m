@@ -162,7 +162,7 @@ def sample(args, exp_num, data=None):
       for kount, batch in enumerate(loader):
         model.zero_grad()
 
-        X, Y, s2v, path = batch['input'], batch['output'], batch['desc'], batch['path']
+        X, Y, s2v, e2v, path = batch['input'], batch['output'], batch['desc'], batch['exp'], batch['path']
         pose, trajectory, start_trajectory = X
         pose_gt, trajectory_gt, start_trajectory_gt = Y
         
@@ -194,7 +194,7 @@ def sample(args, exp_num, data=None):
             pose_dec_straight, y_cap, sent_dec_straight, sent_dec_cross, internal_losses = model.sample_all(s2v, x, time_steps=x.shape[-2], start=start)
             sentences[path[0]] = [s2v[0], sent_dec_straight, sent_dec_cross]
           else:
-            y_cap, internal_losses = model.sample(s2v, time_steps=x.shape[-2], start=start)
+            y_cap, internal_losses = model.sample(s2v, e2v, time_steps=x.shape[-2], start=start)
             sent_dec_straight, sent_dec_cross = None, None
         else:
           assert 0, 'offset = {}, it must be 0 for now'.format(offset)

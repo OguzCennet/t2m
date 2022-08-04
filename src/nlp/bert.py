@@ -1,111 +1,53 @@
 import torch
 import torch.nn as nn
-
-from pytorch_pretrained_bert import BertTokenizer, BertModel, BertConfig
-from pytorch_pretrained_bert.modeling import BertPreTrainedModel
-
+import gensim
+from nlp.bert_embeddings import bert_embeddings
 import pdb
+torch.backends.cudnn.enabled = False
 
-def toggle_grad(model, on_or_off):
-  for param in model.parameters():
-    param.requires_grad = on_or_off
-  
-class BertForSequenceEmbedding(nn.Module):
-  def __init__(self, hidden_size):
-    #config = BertConfig(32000) ## Dummy config file
-    #super(BertForSequenceEmbedding, self).__init__(config)
-    super(BertForSequenceEmbedding, self).__init__()
-    self.hidden_size = hidden_size
-    self.bert = BertModel.from_pretrained('bert-base-uncased')
-    self.classifier = nn.Sequential(nn.Linear(self.bert.config.hidden_size, hidden_size),
-                                    nn.Dropout(self.bert.config.hidden_dropout_prob),
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_size, hidden_size))
-    ''' Fix Bert Embeddings and encoder '''
-    toggle_grad(self.bert.embeddings, False)
-    toggle_grad(self.bert.encoder, False)
-    self.bert.eval()
-    
-    self.pre = BertSentenceBatching()
-  
-  def forward(self, sentences):
-    input_ids, attention_mask = self.pre(sentences)
-    token_type_ids = None
-    outputs, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-    outputs = self.classifier(outputs[:, 0])
-    return outputs, pooled_output
+class BERTEncoder(nn.Module):
+    def __init__(self, hidden_size):
+        super(BERTEncoder, self).__init__()
+        self.hidden_size = hidden_size
+        self.bert = bert_embeddings()
 
-  def train_params(self, idx=0):
-    params = [self.classifier, self.bert.pooler]
-    return params[idx].parameters()
+        self.dec = nn.LSTM(input_size=1536,
+                           hidden_size=512,
+                           num_layers=2,
+                           batch_first=True).double()
 
-  def train(self, mode=True):
-    self.training = mode
-    for module in self.children():
-      module.train(mode)
-    self.bert.eval() ## bert needs to be in eval mode for both modes
-    return self
+    def sort(self, x, reverse=False):
+        return zip(*sorted([(x[i], i) for i in range(len(x))], reverse=reverse))
 
-class BertForAttentionSequenceEmbedding(nn.Module):
-  def __init__(self, hidden_size):
-    super(BertForAttentionSequenceEmbedding, self).__init__()
-    self.hidden_size = hidden_size
-    self.bert = BertModel.from_pretrained('bert-base-uncased')
-    self.classifier = nn.Sequential(nn.Linear(self.bert.config.hidden_size, hidden_size),
-                                    nn.Dropout(self.bert.config.hidden_dropout_prob),
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_size, hidden_size))
-    ''' Fix Bert Embeddings and encoder '''
-    toggle_grad(self.bert.embeddings, False)
-    toggle_grad(self.bert.encoder, False)
-    self.bert.eval()
-    
-    self.pre = BertSentenceBatching()
-  
-  def forward(self, sentences):
-    input_ids, attention_mask = self.pre(sentences)
-    token_type_ids = None
-    outputs, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-    outputs = self.classifier(outputs)
-    return outputs[:, 0, :], outputs, attention_mask
+    def sortNpermute(self, x, mask):
+        mask_sorted, perm = self.sort(
+            mask.sum(dim=-1).cpu().numpy(), reverse=True)
+        return x[list(perm)], list(mask_sorted), list(perm)
 
-  def train_params(self, idx=0):
-    params = [self.classifier, self.bert.pooler]
-    return params[idx].parameters()
+    def inverse_sortNpermute(self, x, perm):
+        _, iperm = self.sort(perm, reverse=False)
+        if isinstance(x, list):
+            return [x_[list(iperm)] for x_ in x]
+        else:
+            return x[list(iperm)]
 
-  def train(self, mode=True):
-    self.training = mode
-    for module in self.children():
-      module.train(mode)
-    self.bert.eval() ## bert needs to be in eval mode for both modes
-    return self  
+    def forward(self, sentences):
+        sentences = [x_.split(' ') for x_ in sentences]
+        x_orig, mask_orig = self.bert.get_vectors(sentences)
+        print(x_orig.shape)
+        # x_ = self.lin(x_orig)
+        # print(x_.shape)
+        ''' Here you will find why sort and permute is done
+    https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pack_padded_sequence.html#torch.nn.utils.rnn.pack_padded_sequence'''
+        x, mask, perm = self.sortNpermute(x_orig, mask_orig)
+        x = torch.nn.utils.rnn.pack_padded_sequence(x, mask, batch_first=True)
 
-class BertSentenceBatching(nn.Module):
-  '''
-  Take a bunch of sentences and convert it to a format that Bert can process
-  * Tokenize
-  * Add [CLS] and [SEP] tokens
-  * Create a mask which denotes the batches
-  '''
-  def __init__(self):
-    super(BertSentenceBatching, self).__init__()
-    self.dummy_param = nn.Parameter(torch.Tensor([1]))
-    # Load pre-trained model tokenizer (vocabulary)
-    self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    
-    # Tokenized input
-    text = "[CLS] Who was Jim Henson ? [SEP] Jim Henson was a puppeteer [SEP]"
-    tokenized_text = self.tokenizer.tokenize(text)
-    print('Tokenization example')
-    print('{}  --->  {}'.format(text, tokenized_text))
-    
-  def __call__(self, x):
-    self.device = self.dummy_param.device
-    x = [self.tokenizer.tokenize(x_) for x_ in x]
-    x = [['[CLS]'] + x_ + ['[SEP]'] for x_ in x]
-    max_len = max([len(x_) for x_ in x])
+        ''' forward pass through lstm '''
+        x, (h, m) = self.dec(x)
 
-    mask = torch.Tensor([[1]*len(x_) + [0]*(max_len-len(x_)) for x_ in x]).long().to(self.device)
-    x = [x_ + ['[SEP]']*(max_len-len(x_)) for x_ in x]
-    indexed_tokens = torch.Tensor([self.tokenizer.convert_tokens_to_ids(x_) for x_ in x]).long().to(self.device)
-    return indexed_tokens, mask
+        ''' get the output at time_step=t '''
+        h = self.inverse_sortNpermute(h[-1], perm)
+
+        # print(h1.shape)
+
+        return h, x_orig

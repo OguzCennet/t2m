@@ -16,7 +16,7 @@ def argparseNloop(loop):
                       help='Fraction of data to be used as dev')
   parser.add_argument('-idx_dependent', nargs='+', type=int, default=[1],
                       help='is training person dependent?')
-  parser.add_argument('-batch_size', nargs='+', type=int, default=[100],
+  parser.add_argument('-batch_size', nargs='+', type=int, default=[1],
                       help='minibatch size. Use batch_size=1 when using time=0')
   parser.add_argument('-time', nargs='+', type=int, default=[32],
                       help='time steps. time=0 gives the full sequence. Use with batch_size=1')
@@ -77,7 +77,7 @@ def argparseNloop(loop):
                       help='kwargs corresposing to the losses')
 
   ## training parameters
-  parser.add_argument('-num_epochs', nargs='+', type=int, default=[50],
+  parser.add_argument('-num_epochs', nargs='+', type=int, default=[1],
                       help='number of epochs for training')
   parser.add_argument('-early_stopping', nargs='+', type=int, default=[1],
                       help='Use 1 for early stopping')

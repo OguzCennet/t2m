@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import gensim
-
+from nlp.bert_embeddings import bert_embeddings
 import pdb
 torch.backends.cudnn.enabled = False
 
@@ -12,7 +12,7 @@ class LSTMEncoder(nn.Module):
     self.w2v = Word2Vec()
     self.input_size = self.w2v.tokenizer.hidden_size
     self.dec = nn.LSTM(input_size=self.input_size,
-                       hidden_size=hidden_size,
+                       hidden_size=512,
                        num_layers=2,
                        batch_first=True).double()
 
@@ -122,7 +122,8 @@ class Word2Vec(nn.Module):
     print('Loaded Word2Vec model')
     
     # Load pre-trained model tokenizer (vocabulary)
-    self.tokenizer = BaseTokenizer(self.model.vocab)
+    words = list(self.model.index_to_key)
+    self.tokenizer = BaseTokenizer(words)
     
     # Tokenized input
     text = "Who was Jim Henson ? Jim Henson was a puppeteer"
@@ -138,6 +139,10 @@ class Word2Vec(nn.Module):
     mask = torch.Tensor([[1]*len(x_) + [0]*(max_len-len(x_)) for x_ in x]).long().to(self.device)
     x = [x_ + ['_SEP']*(max_len-len(x_)) for x_ in x]
     vectors = []
+    #['_UNK', 'person', 'does', '_UNK', '_UNK']
+    #len= 5
+    #torch.Size([1, 5, 300])
+
     for sentence in x:
       vector = []
       for word in sentence:

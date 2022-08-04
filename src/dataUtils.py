@@ -37,6 +37,8 @@ class Data():
     
     self.raw_data = eval(dataset)(path2data)
     self.df = self.raw_data._get_df()
+    #print('Data')
+    #print(self.df.head(3))
     self.s2v = s2v
     self.desc = desc
     self.dataset = dataset
@@ -44,7 +46,8 @@ class Data():
     ## Choose a subset from the dataset based on descriptions
     ## TODO add Regex support
     self.dfs = []
-    
+    #print('desc in data: ', desc, self.desc)
+
     if desc:
       self.vocab, self.rev_vocab = self.create_vocab()
       for desc_ in desc:
@@ -59,6 +62,7 @@ class Data():
         self.dfs.append(df_)
 
       self.df = pd.concat(self.dfs).sample(frac=1).reset_index(drop=True)
+      #print(self.df.head(3))
         
     # if self.s2v:
     #   self.file2id = pkl.load(open('s2v/{}_files.pkl'.format(dataset), 'rb'))
@@ -101,9 +105,16 @@ class Data():
     end_dev = int(start_dev + length*self.split[1])
     start_test = end_dev
 
+    '''
     df_train = self.df[:end_train]
     df_dev = self.df[start_dev:end_dev]
     df_test = self.df[start_test:]
+    '''
+
+    df_train = self.df[:10]
+    print('df_train: ', df_train.head(3))
+    df_dev = self.df[10:20]
+    df_test = self.df[20:30]
 
     minidataKwargs = {'lmksSubset':self.lmksSubset,
                       'time':self.time,
@@ -115,34 +126,48 @@ class Data():
                       'dataset':self.dataset}
 
     if self.desc:
-      dataset_train = ConcatDataset([MiniData(row[self.feats_kind],
-                                              sentence_vector=self.file2vec(desc=row['class']),
-                                              **minidataKwargs) for i, row in tqdm(df_train.iterrows())])
+      #print('self.desc')
+      dataset_train = ConcatDataset([MiniData(row[self.feats_kind], 
+                                            sentence_vector=self.file2vec(desc=row['class']),
+                                            explanation_vector=None,
+                                            **minidataKwargs) for i, row in tqdm(df_train.iterrows())])
+      
       dataset_dev = ConcatDataset([MiniData(row[self.feats_kind],
                                             sentence_vector=self.file2vec(desc=row['class']),
+                                            explanation_vector=None,
                                             **minidataKwargs) for i, row in tqdm(df_dev.iterrows())])
       dataset_test = ConcatDataset([MiniData(row[self.feats_kind],
                                              sentence_vector=self.file2vec(desc=row['class']),
+                                             explanation_vector=None,
                                              **minidataKwargs) for i, row in tqdm(df_test.iterrows())])
     elif self.s2v:
-      dataset_train = ConcatDataset([MiniData(row[self.feats_kind],
+      #print('self.s2v')
+      dataset_train = ConcatDataset([MiniData(row[self.feats_kind], 
                                               sentence_vector=row['descriptions'],
+                                              explanation_vector=row['explanations'],
                                               **minidataKwargs) for i, row in tqdm(df_train.iterrows()) if row['descriptions']])
+      
       dataset_dev = ConcatDataset([MiniData(row[self.feats_kind],
                                             sentence_vector=row['descriptions'],
+                                            explanation_vector=row['explanations'],
                                             **minidataKwargs) for i, row in tqdm(df_dev.iterrows()) if row['descriptions']])
       dataset_test = ConcatDataset([MiniData(row[self.feats_kind],
                                              sentence_vector=row['descriptions'],
+                                             explanation_vector=row['explanations'],
                                              **minidataKwargs) for i, row in tqdm(df_test.iterrows()) if row['descriptions']])
     else:
+      #print('else')
       dataset_train = ConcatDataset([MiniData(row[self.feats_kind],
                                               sentence_vector=row['descriptions'],
+                                              explanation_vector=row['explanations'],
                                               **minidataKwargs) for i, row in tqdm(df_train.iterrows())])
       dataset_dev = ConcatDataset([MiniData(row[self.feats_kind],
                                             sentence_vector=row['descriptions'],
+                                            explanation_vector=row['explanations'],
                                             **minidataKwargs) for i, row in tqdm(df_dev.iterrows())])
       dataset_test = ConcatDataset([MiniData(row[self.feats_kind],
                                              sentence_vector=row['descriptions'],
+                                             explanation_vector=row['explanations'],
                                              **minidataKwargs) for i, row in tqdm(df_test.iterrows())])
       
     return {'train':dataset_train,
@@ -151,6 +176,7 @@ class Data():
 
   @staticmethod
   def tokenize(desc):
+    print(desc)
     wordsegment.load()
     desc = desc.lower()
 
@@ -224,7 +250,8 @@ class Data():
 
 
 class MiniData(Dataset):
-  def __init__(self, path2csv, lmksSubset, time, offset=0, mask=[1, 0, 1, 1, 1, 1, 1], feats_kind='quaternion', sentence_vector=None, chunks=1, dataset='CMUMocap', f_ratio=30):
+  def __init__(self, path2csv, lmksSubset, time, offset=0, mask=[1, 0, 1, 1, 1, 1, 1], 
+    feats_kind='quaternion', sentence_vector=None, explanation_vector=None, chunks=1, dataset='CMUMocap', f_ratio=30):
     super(MiniData, self).__init__()
     self.path2csv = path2csv
     self.mat_full = pd.read_csv(path2csv, index_col=0)
@@ -236,8 +263,8 @@ class MiniData(Dataset):
     
     ## get subset_columns
     self.columns_ = list(self.mat_full.columns)
-
     self.sentence_vector = sentence_vector
+    self.explanation_vector = explanation_vector
     self.chunks = chunks
 
     self.f_ratio = f_ratio
@@ -293,8 +320,8 @@ class MiniData(Dataset):
               'path':self.path2csv}
 
     if self.sentence_vector is not None:
-      item.update({'desc':self.sentence_vector})
-
+      item.update({'desc':self.sentence_vector, 'exp':self.explanation_vector})
+      #print('item: ', item)
     return item
 
   def update_idx_list(self, time):

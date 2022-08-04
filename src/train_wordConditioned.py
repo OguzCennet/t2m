@@ -16,7 +16,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 from dataUtils import *
 from lossUtils import *
-from model.model import *
+from model.new_model import *
 from data.data import *
 
 from pycasper.name import Name
@@ -154,7 +154,7 @@ def train(args, exp_num, data=None):
     for count, batch in enumerate(Tqdm):
       model.zero_grad()
       optim.zero_grad()
-      X, Y, s2v = batch['input'], batch['output'], batch['desc']
+      X, Y, s2v, e2v = batch['input'], batch['output'], batch['desc'], batch['exp']
       pose, trajectory, start_trajectory = X
       pose_gt, trajectory_gt, start_trajectory_gt = Y
 
@@ -171,9 +171,9 @@ def train(args, exp_num, data=None):
       y = pre.transform(y)
 
       if desc == 'train':
-        y_cap, internal_losses = model(x, s2v, train=True)
+        y_cap, internal_losses = model(x, s2v, e2v, train=True)
       else:
-        y_cap, internal_losses = model(x, s2v, train=False)
+        y_cap, internal_losses = model(x, s2v, e2v, train=False)
         
       loss = 0
       loss_ = 0
@@ -204,6 +204,7 @@ def train(args, exp_num, data=None):
       internal_losses = [i.detach() for i in internal_losses]
       if count>=0 and args.debug: ## debugging by overfitting
         break
+      break
 
     return running_loss/running_count
 
@@ -255,7 +256,8 @@ def train(args, exp_num, data=None):
         data.update_dataloaders(time_)
         tqdm.write('Training up to time: {}'.format(time_))
       else:
-        break
+        break    
+    break
     
   ## Sample
   print('Loading the best model and running the sample loop')

@@ -138,5 +138,7 @@ python render.py -dataset KITMocap -load save/jl2p/exp_726_cpk_jointSampleStart_
 python render.py -dataset KITMocap -load save/lin-et-al/exp_700_cpk_mooney_model_Seq2SeqConditioned10_time_16_chunks_1_weights.p -feats_kind fke -render_list subsets/render_list
 ```
 
+python train_wordConditioned.py -batch_size 1 -cpk jl2p -curriculum 1 -dataset KITMocap -early_stopping 1 -exp 1 -f_new 8 -feats_kind rifke -losses "['SmoothL1Loss']" -lr 0.001 -mask "[0]" -model Seq2SeqConditioned9 -modelKwargs "{'hidden_size':1024, 'use_tp':False, 's2v':'lstm'}" -num_epochs 1 -path2data ../dataset/kit-mocap -render_list subsets/render_list -s2v 1 -save_dir save/model/ -tb 1 -time 16 -transforms "['zNorm']" 
+
 ### References
 [1]: Lin, Angela S., et al. "1. Generating Animated Videos of Human Activities from Natural Language Descriptions." Learning 2018 (2018).

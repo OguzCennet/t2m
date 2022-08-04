@@ -1,6 +1,8 @@
 *~
 __pycache__
+.ipynb_checkpoints
 jobs
 save
-.ipynb_checkpoints
-#*
+pycasper
+s2v
+dataset
