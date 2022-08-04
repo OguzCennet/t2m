@@ -204,7 +204,7 @@ def train(args, exp_num, data=None):
       internal_losses = [i.detach() for i in internal_losses]
       if count>=0 and args.debug: ## debugging by overfitting
         break
-      break
+      #break
 
     return running_loss/running_count
 
@@ -257,7 +257,7 @@ def train(args, exp_num, data=None):
         tqdm.write('Training up to time: {}'.format(time_))
       else:
         break    
-    break
+    #break
     
   ## Sample
   print('Loading the best model and running the sample loop')

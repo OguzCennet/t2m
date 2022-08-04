@@ -13,7 +13,7 @@ class BERTEncoder(nn.Module):
 
         self.dec = nn.LSTM(input_size=1536,
                            hidden_size=512,
-                           num_layers=2,
+                           dropout=0.2,
                            batch_first=True).double()
 
     def sort(self, x, reverse=False):
@@ -34,7 +34,7 @@ class BERTEncoder(nn.Module):
     def forward(self, sentences):
         sentences = [x_.split(' ') for x_ in sentences]
         x_orig, mask_orig = self.bert.get_vectors(sentences)
-        print(x_orig.shape)
+        #print(x_orig.shape)
         # x_ = self.lin(x_orig)
         # print(x_.shape)
         ''' Here you will find why sort and permute is done

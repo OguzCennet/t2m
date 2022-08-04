@@ -123,8 +123,8 @@ def argparseNloop(loop):
   
     
   args, unknown = parser.parse_known_args()
-  print(args)
-  print(unknown)
+  #print(args)
+  #print(unknown)
 
   ## Create a permutation of all the values in argparse
   args_dict = args.__dict__
@@ -133,5 +133,5 @@ def argparseNloop(loop):
 
   for i, perm in enumerate(args_perm):
     args.__dict__.update(perm)
-    print(args)
+    #print(args)
     loop(args, i)

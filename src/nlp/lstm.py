@@ -14,6 +14,7 @@ class LSTMEncoder(nn.Module):
     self.dec = nn.LSTM(input_size=self.input_size,
                        hidden_size=512,
                        num_layers=2,
+                       dropout=0,
                        batch_first=True).double()
 
   def sort(self, x, reverse=False):

@@ -16,7 +16,9 @@ from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
                           RobertaConfig, RobertaForMaskedLM, RobertaTokenizer,
                           DistilBertConfig, DistilBertForMaskedLM, DistilBertTokenizer)
 
+from transformers import logging
 
+logging.set_verbosity_error()
 '''
 MODEL_CLASSES = {
     'gpt2': (GPT2Config, GPT2LMHeadModel, GPT2Tokenizer),
